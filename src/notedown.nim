@@ -1,5 +1,5 @@
 
-# TODO: Make nimble package, git repo, add check if there are markdown files in the directory, maybe recurse dirs?
+# TODO: add check if there are markdown files in the directory (in case there are none), maybe recurse dirs?
 #       Make options to either serve (current method) or generate html output
 
 import markdown, std/[os, tempfiles, sugar, strutils, browsers, algorithm, times]
