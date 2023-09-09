@@ -7,7 +7,10 @@ Notedown is a program that makes your notes pretty. All you have to do is take n
 - MathJax support
 - Syntax highlighting
 - File reloading
-- Static file output (WIP)
-- Dark/light mode (WIP)
-- custom HTML/JS/CSS (WIP)
-- Recursive directory search (WIP)
+
+### TODO
+
+- Static file output
+- Dark/light mode
+- custom HTML/JS/CSS
+- Recursive directory search
