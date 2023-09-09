@@ -1,10 +1,5 @@
-
-# TODO: add check if there are markdown files in the directory (in case there are none), maybe recurse dirs?
-#       Make options to either serve (current method) or generate html output
-
 import markdown, std/[os, tempfiles, sugar, strutils, browsers, algorithm, times]
-import jester,
-       ws, ws/jester_extra
+import jester # , ws, ws/jester_extra
 from htmlgen import nil
 import karax / [karaxdsl, vdom]
        
