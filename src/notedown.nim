@@ -51,9 +51,7 @@ proc index(): string =
     head:
       title:
         text "Notes"
-      # verbatim(mathjax)
       verbatim(bootstrap)
-      # verbatim(highlight)
       verbatim(custom_css)
     body:
       nav(class = navbarClass):

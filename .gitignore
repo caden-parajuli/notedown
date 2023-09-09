@@ -1,0 +1,16 @@
+# Ignore files with no extention:
+*
+!*/
+!*.*
+
+# Nim build/cache directories
+nimcache/
+nimblecache/
+htmldocs/
+
+# Normal ignores:
+*.exe
+*.elf
+*.pdb
+*.ilk
+*.out
