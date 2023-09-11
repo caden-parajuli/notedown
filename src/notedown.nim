@@ -1,7 +1,11 @@
-import markdown, std/[os, tempfiles, sugar, strutils, browsers, algorithm, times]
-import jester # , ws, ws/jester_extra
-from htmlgen import nil
+import std / [os, sugar, strutils, browsers, algorithm, times]
+
+
+import markdown
 import karax / [karaxdsl, vdom]
+
+from jester import nil
+import jester except serve
        
 var files: seq[string]
 const
@@ -41,7 +45,7 @@ template kxi(): int = 0
 template addEventHandler(n: VNode; k: EventKind; action: string; kxi: int) =
   n.setAttr($k, action)
   
-proc index(): string =
+proc index(fileSeq: seq[string]): string =
   let vnode = buildHtml(html(data-bs-theme = "dark")):
     head:
       title:
@@ -50,15 +54,15 @@ proc index(): string =
       verbatim(custom_css)
     body:
       nav(class = navbarClass):
-        a(href = files[0], class = "btn btn-primary my-btn-class"):
+        a(href = fileSeq[0], class = "btn btn-primary my-btn-class"):
           text "First"
         a(href = "/", class="btn btn-primary"):
           text "Main Menu"
-        a(href = files[files.high], class = "btn btn-primary my-btn-class"):
+        a(href = fileSeq[fileSeq.high], class = "btn btn-primary my-btn-class"):
           text "Last"
       br()
       tdiv:
-        for file in files:
+        for file in fileSeq:
           a(href = file):
             text file
           br()
@@ -86,37 +90,12 @@ proc markdownFileToHtml(name, previous, next: string): string =
       verbatim(markdown(readFile(name)))
   result = $vnode
 
-router myRouter:
-  get "/":
-    resp(index())
-  post "/":
-    resp(index())
-    
-  get "/@name":
-    let
-        file_index = files.find(@"name")
-    if file_index != -1:
-      let
-        previous = (if file_index == 0: "/" else: files[file_index - 1])
-        next = (if file_index == high(files): "/" else: files[file_index + 1])
-      var html = markdownFileToHtml(@"name", previous, next)
-                 # htmlgen.html(htmlgen.head(htmlgen.title(@"name"),
-                 #                           bootstrap,
-                 #                           custom_css),
-                 #              htmlgen.body(htmlgen.nav(class="navbar navbar-dark bg-dark fixed-top justify-content-between",
-                 #                                       htmlgen.a("Previous", href = previous, class = "btn btn-info my-btn-class"),
-                 #                                       htmlgen.a("Main Menu", href = "/", class = "btn btn-info", htmlgen.br()),
-                 #                                       htmlgen.a("Next", href = next, class = "btn btn-info my-btn-class")),
-                 #                           htmlgen.br(),
-                 #                           markdown(readFile(@"name"))))
-      resp(html)
-    else:
-      resp Http404, "ERROR 404: File not found!"
-
 proc note_cmp(x, y: string): int =
   let
-    (x_month, x_day) = (x[0..2], parseInt(x.split("_")[1]))
-    (y_month, y_day) = (y[0..2], parseInt(y.split("_")[1]))
+    fileX = extractFilename(x)
+    fileY = extractFilename(y)
+    (x_month, x_day) = (fileX[0..2], parseInt(fileX.split("_")[1]))
+    (y_month, y_day) = (fileY[0..2], parseInt(fileY.split("_")[1]))
     x_month_num = months.find(x_month)
     y_month_num = months.find(y_month)
   if x_month_num == -1:
@@ -130,7 +109,68 @@ proc note_cmp(x, y: string): int =
 proc parseDate(strDate: string): DateTime =
   result = parse(strDate, "MMM'_'d'_'ddd")
       
-proc main(args: seq[string]): int =
+proc html(outdir: string = "notedown_html", args: seq[string]) =
+  # NOT FINISHED
+  var
+    inDir: string
+      
+  if len(args) > 0:
+    inDir = args[0]
+  else:
+    stdout.write "Type the path containing the notes files > "
+    inDir = expandTilde(readLine(stdin))
+  setCurrentDir(inDir)
+
+  # Create the output directory if it doesn't exist
+  createDir(outdir)
+
+  for file in walkDirRec(inDir, relative = true, checkDir = true):
+    # If it's a dir, create dir
+    if dirExists(inDir / file):
+      createDir(outdir / file)
+    elif fileExists(inDir / file) and file.splitFile()[2] == ".md":
+      files.add(changeFileExt(file, "html"))
+
+  # Sort files (not implemented yet)
+  files.sort(note_cmp)
+  # Create the index
+  writeFile(outdir / "index.html", index(files))
+      
+  var
+    next: string
+    previous: string
+  for fileNum in 0 .. files.high:
+    if fileNum == 0:
+      previous = "index.html"
+      next = files[1]
+    elif fileNum == files.high:
+      previous = files[^2]
+      next = "index.html"
+    else:
+      previous = files[fileNum - 1]
+      next = files[fileNum + 1]
+    writeFile(outDir / files[fileNum], markdownFileToHtml(changeFileExt(files[fileNum], "md"), previous, next))
+  
+
+jester.router myRouter:
+  get "/":
+    jester.resp(index(files))
+  post "/":
+    jester.resp(index(files))
+    
+  get "/@name":
+    let
+        file_index = files.find(@"name")
+    if file_index != -1:
+      let
+        previous = (if file_index == 0: "/" else: files[file_index - 1])
+        next = (if file_index == high(files): "/" else: files[file_index + 1])
+      var html = markdownFileToHtml(@"name", previous, next)
+      resp(html)
+    else:
+      resp Http404, "ERROR 404: File not found!"
+    
+proc serve(args: seq[string]) =
   let
     port_num = 8080
     port = Port(port_num)
@@ -142,7 +182,7 @@ proc main(args: seq[string]): int =
   if len(args) > 0:
     folder_path = args[0]
   else:
-    echo("Type the path containing the notes files: ")
+    stdout.write "Type the path containing the notes files > "
     folder_path = expandTilde(readLine(stdin))
   setCurrentDir(folder_path)
 
@@ -153,10 +193,11 @@ proc main(args: seq[string]): int =
   files.sort(note_cmp)
       
   openDefaultBrowser("http://127.0.0.1:" & $port_num)
-  jester_inst.serve()
-      
+  jester.serve(jester_inst)
+
+  
 when isMainModule:
   import cligen
 
   # Parse command line
-  dispatch(main)
+  dispatchMulti([serve], [html])

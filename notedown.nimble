@@ -14,5 +14,4 @@ requires "nim >= 1.6.6"
 requires "markdown"
 requires "jester"
 requires "karax"
-requires "cligen"               # Switch to cliche
-requires "cliche"
+requires "cligen"
